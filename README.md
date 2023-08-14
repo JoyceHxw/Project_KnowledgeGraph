@@ -1,0 +1,14 @@
+# 2023年暑期实训知识图谱项目
+这是基于django和neo4j数据库开发的关于上市公司的知识图谱项目
+
+mysite是django配置文件
+
+finance是django项目框架
+
+crawl是运用selenium从东方财富网站爬取上市公司相关数据
+
+data_process是运用pandas进行数据处理并导入neo4j数据库
+
+chatbot是运用spacy训练上市公司实体标签，实现简单的问答功能
+
+evaluation是运用topsis方法实现上市公司综合评价功能
