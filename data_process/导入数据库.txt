@@ -1,0 +1,185 @@
+导入neo4j语句
+    1.创建数据库,修改conf文件
+        initial.dbms.default_database=finance.db
+        
+    2.网页端导入csv数据,csv文件放入import中
+        --行业表
+        LOAD CSV WITH HEADERS FROM "file:///finance/industry_processed.csv" AS row
+        CREATE (n:Industry)
+        SET n = row
+        --地区表
+        LOAD CSV WITH HEADERS FROM "file:///finance/region_processed.csv" AS row
+        CREATE (n:Region)
+        SET n = row
+        --公司表
+        LOAD CSV WITH HEADERS FROM "file:///finance/company_processed.csv" AS row
+        CREATE (n:Company)
+        SET n = row
+        --股东表
+        LOAD CSV WITH HEADERS FROM "file:///finance/shareholder_processed.csv" AS row
+        CREATE (n:Shareholder)
+        SET n = row
+        --高管表
+        LOAD CSV WITH HEADERS FROM "file:///finance/executive_processed.csv" AS row
+        CREATE (n:Executive)
+        SET n = row
+        --公司行业关系表
+        LOAD CSV WITH HEADERS FROM "file:///finance/company_processed.csv" AS row
+        match (m:Company),(n:Industry)
+            where m.name=row.name 
+                and n.name=row.industry
+        merge (m)-[:BELONGTO]->(n)
+        --公司地区关系表
+        LOAD CSV WITH HEADERS FROM "file:///finance/company_processed.csv" AS row
+        match (m:Company),(n:Region)
+            where m.name=row.name 
+                and n.name=row.region
+        merge (m)-[:LOCATE]->(n)
+        --公司股东关系表
+        LOAD CSV WITH HEADERS FROM "file:///finance/shareholder_company_processed.csv" AS row
+        match (m:Shareholder), (n:Company)
+            where n.name=row.company_name
+                and m.name=row.name
+        merge (m)-[r:INVEST]->(n)
+        set r.rate=row.rate
+        --公司高管关系表
+        LOAD CSV WITH HEADERS FROM "file:///finance/executive_company_processed.csv" AS row
+        match (m:Executive), (n:Company)
+            where n.name=row.company_name
+                and m.name=row.name
+                and m.age=row.age
+                and m.gender=row.gender
+                and m.education=row.education
+        merge (m)-[r:MANAGE]->(n)
+        set r.salary=row.salary, r.position=row.position
+        --财务属性
+        LOAD CSV WITH HEADERS FROM "file:///finance/company_finance_processed.csv" AS row
+        match (n:Company)
+        where n.name=row.name
+        set n.ROE_2022=row.ROE_2022,n.ROE_2021=row.ROE_2021,n.ROE_2020=row.ROE_2020,n.ROE_2019=row.ROE_2019,n.ROE_2018=row.ROE_2018,
+        n.asset_liability_2022=row.asset_liability_2022,n.asset_liability_2021=row.asset_liability_2021,n.asset_liability_2020=row.asset_liability_2020,n.asset_liability_2019=row.asset_liability_2019,n.asset_liability_2018=row.asset_liability_2018
+        --公司评价
+        LOAD CSV WITH HEADERS FROM "file:///finance/topsis_result.csv" AS row
+        match (n:Company)
+        where n.name=row.name
+        set n.ROE_avg=row.ROE_avg, n.asset_liability_avg=row.asset_liability_avg, n.shareholder_capacity=row.shareholder_capacity,n.management_capacity=row.management_capacity,n.topsis_score=row.topsis_score,n.rank=row.rank
+        --导入强股东和强高管数量属性
+            --默认为0
+        match (n:Company)
+        set n.strong_shareholder_num=0
+        LOAD CSV WITH HEADERS FROM "file:///finance/strong_shareholder_num.csv" AS row
+        match (n:Company)
+        where n.name=row.name
+        set n.strong_shareholder_num=row.strong_shareholder_num
+            --默认为0
+        match (n:Company)
+        set n.strong_executive_num=0
+        LOAD CSV WITH HEADERS FROM "file:///finance/strong_executive_num.csv" AS row
+        match (n:Company)
+        where n.name=row.name
+        set n.strong_executive_num=row.strong_executive_num
+        --给同为股东和高管的股东添加标签
+        match (n:Shareholder)-[r1:INVEST]->(c:Company),(m:Executive)-[r2:MANAGE]->(c:Company)
+        where n.name=m.name
+        set n:Executive
+        --填补股票代码前缀零缺失
+        MATCH (n:Company)
+        WHERE size(n.id) < 6
+        with n,n.id as old_id,6-size(n.id) as cnt_zero
+        with n,cnt_zero,right("000000" + old_id, 6) as new_id
+        set n.id=new_id
+
+导入MySQL语句：
+    1.创建数据库
+        CREATE DATABASE finance
+            DEFAULT CHARACTER SET = 'utf8mb4';
+
+    2.创建表：
+        CREATE TABLE industries(  
+            id int NOT NULL PRIMARY KEY AUTO_INCREMENT COMMENT 'Primary Key',
+            name VARCHAR(255)
+        ) COMMENT '行业表';
+        CREATE TABLE companies(  
+            id int NOT NULL PRIMARY KEY COMMENT 'Primary Key',
+            name VARCHAR(255),
+            industry_id INT,
+            industry_name VARCHAR(255),
+            FOREIGN KEY (industry_id) REFERENCES industries(id)
+        ) COMMENT '公司表';
+        CREATE TABLE executives(  
+            id int NOT NULL PRIMARY KEY AUTO_INCREMENT COMMENT 'Primary Key',
+            name VARCHAR(255),
+            gender VARCHAR(10),
+            age INT,
+            education VARCHAR(50),
+        ) COMMENT '高管表';
+        CREATE TABLE shareholders(  
+            id int NOT NULL PRIMARY KEY AUTO_INCREMENT COMMENT 'Primary Key',
+            name VARCHAR(255)
+        ) COMMENT '股东表';
+        CREATE TABLE company_shareholder(  
+            id int NOT NULL PRIMARY KEY AUTO_INCREMENT COMMENT 'Primary Key',
+            company_id int NOT NULL,
+            shareholder_id int NOT NULL,
+            rate DECIMAL(5, 2),
+            FOREIGN KEY (company_id) REFERENCES companies(id),
+            FOREIGN KEY (shareholder_id) REFERENCES shareholders(id)
+        ) COMMENT '公司股东对照表';
+        CREATE TABLE company_executive(  
+            id int NOT NULL PRIMARY KEY AUTO_INCREMENT COMMENT 'Primary Key',
+            company_id int NOT NULL,
+            executive_id int NOT NULL,
+            salary DECIMAL(10, 2),
+            position VARCHAR(255),
+            FOREIGN KEY (company_id) REFERENCES companies(id),
+            FOREIGN KEY (executive_id) REFERENCES executives(id)
+        ) COMMENT '公司高管对照表';
+
+    3.导入数据
+        --行业表
+        LOAD DATA INFILE "D:/2023SummerProject/week3_project/industry_processed.csv"
+        INTO TABLE industries
+        FIELDS TERMINATED BY ',' ENCLOSED BY '"'
+        LINES TERMINATED BY '\r\n'
+        IGNORE 1 ROWS
+        (name);
+        --公司表
+        LOAD DATA INFILE 'D:/2023SummerProject/week3_project/company_processed.csv'
+        INTO TABLE companies
+        FIELDS TERMINATED BY ',' ENCLOSED BY '"'
+        LINES TERMINATED BY '\r\n'
+        IGNORE 1 ROWS
+        (industry_name, id, name)
+        SET industry_id = (
+        SELECT id FROM industries WHERE industries.name = companies.industry_name
+        );
+        --股东表
+        LOAD DATA INFILE 'D:/2023SummerProject/week3_project/shareholder_processed.csv'
+        INTO TABLE shareholders
+        FIELDS TERMINATED BY ',' ENCLOSED BY '"'
+        LINES TERMINATED BY '\r\n'
+        IGNORE 1 ROWS
+        (name);
+        --高管表
+        LOAD DATA INFILE 'D:/2023SummerProject/week3_project/companymgt_processed.csv'
+        INTO TABLE executives
+        FIELDS TERMINATED BY ',' ENCLOSED BY '"'
+        LINES TERMINATED BY '\r\n'
+        IGNORE 1 ROWS
+        (name,gender,@age,education)
+        SET age = NULLIF(@age, '');
+        --公司股东对照表
+        INSERT INTO company_shareholder (company_id,shareholder_id,rate)
+        SELECT c.id as company_id, s.id as shareholder_id, temp2.rate
+        FROM temp2
+        JOIN companies c ON temp2.company_name=c.name
+        JOIN shareholders s ON temp2.name=s.name;
+        --公司高管对照表
+        INSERT INTO company_executive (company_id,executive_id,salary,position)
+        SELECT c.id as company_id, e.id as executive_id, temp.salary, temp.position
+        FROM temp
+        JOIN companies c ON temp.company_name=c.name
+        JOIN executives e ON temp.name=e.name and temp.gender=e.gender and temp.age=e.age and temp.education=e.education;
+    
+    4.导出sql数据库
+        mysqldump -u root -p finance > finance.sql

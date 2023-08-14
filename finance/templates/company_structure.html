@@ -1,0 +1,436 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <!-- plugins:css -->
+    <link rel="stylesheet" href="{% static 'plugins/star-admin/template/vendors/feather/feather.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/star-admin/template/vendors/mdi/css/materialdesignicons.min.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/star-admin/template/vendors/ti-icons/css/themify-icons.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/star-admin/template/vendors/typicons/typicons.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/star-admin/template/vendors/simple-line-icons/css/simple-line-icons.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/star-admin/template/vendors/css/vendor.bundle.base.css' %}">
+    <!-- endinject -->
+    <!-- Plugin css for this page -->
+    <link rel="stylesheet" href="{% static 'plugins/star-admin/template/vendors/datatables.net-bs4/dataTables.bootstrap4.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/star-admin/template/js/select.dataTables.min.css' %}">
+    <!-- End plugin css for this page -->
+    <!-- inject:css -->
+    <link rel="stylesheet" href="{% static 'plugins/star-admin/template/css/vertical-layout-light/style.css' %}">
+    <!-- endinject -->
+    <link rel="shortcut icon" href="{% static 'plugins/star-admin/template/images/favicon.png' %}" />
+</head>
+<body>
+    <!-- partial:partials/_navbar.html -->
+    <nav class="navbar default-layout col-lg-12 col-12 p-0 fixed-top d-flex align-items-top flex-row">
+        <div class="text-center navbar-brand-wrapper d-flex align-items-center justify-content-start">
+          <div class="me-3">
+            <button class="navbar-toggler navbar-toggler align-self-center" type="button" data-bs-toggle="minimize">
+              <span class="icon-menu"></span>
+            </button>
+          </div>
+          <div>
+            <a class="navbar-brand brand-logo" href="{% url 'index' %}">
+                <strong>知识图谱</strong> KG
+            </a>
+          </div>
+        </div>
+        <div class="navbar-menu-wrapper d-flex align-items-top"> 
+          <ul class="navbar-nav">
+            <li class="nav-item font-weight-semibold d-none d-lg-block ms-0">
+              <h1 class="welcome-text"><span class="text-black fw-bold">{{ name }}</span></h1>
+            </li>
+          </ul>
+          <ul class="navbar-nav ms-auto">
+            <li class="nav-item dropdown">
+              <a class="nav-link count-indicator" href="https://gitee.com/joycehuangxw/group-12--final-project.git">
+                <i class="icon-social-github icon-lg"></i>
+              </a>
+            </li>
+            <li class="nav-item dropdown d-none d-lg-block user-dropdown">
+              <a class="nav-link" id="UserDropdown" href="#" data-bs-toggle="dropdown" aria-expanded="false">
+                {{ request.user_obj.username }}</a>
+              <div class="dropdown-menu dropdown-menu-right navbar-dropdown" aria-labelledby="UserDropdown">
+                <div class="dropdown-header text-center">
+                  <p class="fw-light text-muted mb-0">{{ request.user_obj.email }}</p>
+                </div>
+                <a class="dropdown-item" href="{% url 'logout' %}"><i class="dropdown-item-icon mdi mdi-power text-primary me-2"></i>退出登录</a>
+              </div>
+            </li>
+          </ul>
+          <button class="navbar-toggler navbar-toggler-right d-lg-none align-self-center" type="button" data-bs-toggle="offcanvas">
+            <span class="mdi mdi-menu"></span>
+          </button>
+        </div>
+    </nav>
+    <!-- partial:partials/_sidebar.html -->
+    <div class="container-fluid page-body-wrapper">
+        <nav class="sidebar sidebar-offcanvas" id="sidebar">
+            <ul class="nav">
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'search_company_overview' %}?name={{name}}">
+                    <i class="mdi mdi-grid-large menu-icon"></i>
+                    <span class="menu-title">Overview</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'search_company_structure' %}?name={{name}}">
+                    <i class="mdi mdi-layers-outline menu-icon"></i>
+                    <span class="menu-title">Structure</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'search_company_evaluation' %}?name={{name}}">
+                    <i class="mdi mdi-chart-line menu-icon"></i>
+                    <span class="menu-title">Evaluation</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        <main class="main-panel">     
+            <div class="content-wrapper">
+                <div class="row">
+                    <!--echarts图形呈现公司架构图-->
+                    <div class="col-lg-12 grid-margin stretch-card">
+                        <div class="card">
+                          <div class="card-body">
+                            <h4 class="card-title">公司架构图</h4>
+                            <div class="table-responsive">
+                                <div id="structure" style="height: 500px"></div>
+                            </div>
+                          </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6 grid-margin stretch-card">
+                        <div class="card">
+                          <div class="card-body">
+                            <h4 class="card-title">股东列表</h4>
+                            <div class="table-responsive">
+                                <table id="shareholders-table" class="table">
+                                    <thead>
+                                    <tr>
+                                        <th scope="col">股东名称</th>
+                                        <th scope="col">持股比例（%）</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    </tbody>
+                                </table>
+                            </div>
+                          </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6 grid-margin stretch-card">
+                        <div class="card">
+                          <div class="card-body">
+                            <h4 class="card-title">股东持股比例饼图</h4>
+                            <div class="table-responsive">
+                                <div id="shareholder_graph" style="height: 550px;"></div>
+                            </div>
+                          </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-12 grid-margin stretch-card">
+                        <div class="card">
+                          <div class="card-body">
+                            <h4 class="card-title">高管列表</h4>
+                            <div class="table-responsive">
+                                <table id="executives-table" class="table" style="height: 500px;">
+                                    <thead>
+                                    <tr>
+                                        <th scope="col">名称</th>
+                                        <th scope="col">性别</th>
+                                        <th scope="col">年龄</th>
+                                        <th scope="col">教育程度</th>
+                                        <th scope="col">职位</th>
+                                        <th scope="col">薪资（万）</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    </tbody>
+                                </table>
+                            </div>
+                          </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+
+<script src="{% static 'js/echarts.min.js' %}"></script>
+<script src="{% static 'js/macarons.js' %}"></script>
+<!-- plugins:js -->
+<script src="{% static 'plugins/star-admin/template/vendors/js/vendor.bundle.base.js' %}"></script>
+<!-- endinject -->
+<!-- Plugin js for this page -->
+<script src="{% static 'plugins/star-admin/template/vendors/chart.js/Chart.min.js' %}"></script>
+<script src="{% static 'plugins/star-admin/template/vendors/bootstrap-datepicker/bootstrap-datepicker.min.js' %}"></script>
+<script src="{% static 'plugins/star-admin/template/vendors/progressbar.js/progressbar.min.js' %}"></script>
+<!-- End plugin js for this page -->
+<!-- inject:js -->
+<script src="{% static 'plugins/star-admin/template/js/off-canvas.js' %}"></script>
+<script src="{% static 'plugins/star-admin/template/js/hoverable-collapse.js' %}"></script>
+<script src="{% static 'plugins/star-admin/template/js/template.js' %}"></script>
+<script src="{% static 'plugins/star-admin/template/js/settings.js' %}"></script>
+<script src="{% static 'plugins/star-admin/template/js/todolist.js' %}"></script>
+<!-- endinject -->
+<!-- Custom js for this page-->
+<script src="{% static 'plugins/star-admin/template/js/jquery.cookie.js' %}" type="text/javascript"></script>
+<script src="{% static 'plugins/star-admin/template/js/dashboard.js' %}"></script>
+<script src="{% static 'plugins/star-admin/template/js/Chart.roundedBarCharts.js' %}"></script>
+<!-- End custom js for this page-->
+
+{% comment %} 高亮 {% endcomment %}
+<script>
+    // 获取当前页面的URL
+    var currentURL =decodeURIComponent(window.location.href);
+    // 获取所有目标<a>元素
+    var targetLinks = document.querySelectorAll('.nav-link');
+    console.log(currentURL);
+    // 遍历所有目标<a>元素，比较href属性与当前URL
+    targetLinks.forEach(function(targetLink) {
+        var targetHref = targetLink.getAttribute('href');        
+        if (currentURL.includes(targetHref)) {
+            // 如果相同，添加高亮
+            targetLink.parentElement.classList.add('active');
+        }
+    });
+</script>
+
+{% comment %} 架构图 {% endcomment %}
+<script type="text/javascript">
+    var companyShareholders = JSON.parse('{{ company_shareholders_json|escapejs }}');
+    var companyExecutives = JSON.parse('{{ company_executives_json|escapejs }}');
+    var nodes = [];
+    var links = [];
+    // 用于存储已添加的公司节点，一对多关系，去重
+    var companyNodes={}; 
+    var shareholderNodes={};
+    // 股东
+    for (var i = 0; i < companyShareholders.length; i++) {
+        var shareholder = companyShareholders[i].m.name;
+        var relationshipProperty = companyShareholders[i].r.rate;
+        var company = companyShareholders[i].n.name;
+    
+        // 节点
+        nodes.push({ name: shareholder, category: 'Shareholder' });
+        shareholderNodes[shareholder]=true;
+        if (!companyNodes[company]) {
+            nodes.push({ name: company, category: 'Company' });
+            companyNodes[company] = true;
+        }
+    
+        // 关系
+        links.push({ source: shareholder, target: company, value: relationshipProperty });
+    }
+    // console.log(nodes)
+    // 高管
+    for (var i = 0; i < companyExecutives.length; i++) {
+        var executive = companyExecutives[i].m.name;
+        var relationshipProperty = companyExecutives[i].r.position;
+        var company = companyExecutives[i].n.name;
+    
+        // 节点
+        // 高管可能与股东重合
+        if(!shareholderNodes[executive]){
+            nodes.push({ name: executive, category: 'Executive' });
+        }
+        else{
+            executive=executive+"（高管）";
+            nodes.push({ name: executive, category: 'Executive' });
+        }
+        if (!companyNodes[company]) {
+            nodes.push({ name: company, category: 'Company' });
+            companyNodes[company] = true;
+        }
+    
+        // 关系
+        links.push({ source: executive, target: company, value: relationshipProperty });
+    }
+
+    // 初始化ECharts
+    var myChart = echarts.init(document.getElementById('structure'));
+    var categories = [{ name: 'Shareholder' }, { name: 'Company' }, { name: 'Executive' }];
+    
+    // 使两种类型节点分开
+    nodes.forEach(function (node) {
+        if (node.category === 'Shareholder') {
+          node.x = -200; // Adjust x position for Shareholder nodes on the left side
+          node.y = Math.random() * 400; // Random y position to avoid overlapping
+        } else {
+          node.x = 800; // Adjust x position for Executive nodes on the right side
+          node.y = Math.random() * 400; // Random y position to avoid overlapping
+        }
+    });
+    var option = {
+        color:['#2ec7c9','#5ab1ef','#b6a2de'],
+        // 标签
+        legend: {
+            data: categories.map(item => item.name),
+            left: 10,
+            orient: 'vertical',
+            bottom: 20,
+        },
+        // 悬浮信息框
+        tooltip: {
+        },
+        series: [
+            {
+                type: 'graph',
+                layout: 'force',
+                data: nodes,
+                links: links,
+                categories: categories,
+                roam: true,
+                label: {
+                    show: true,
+                    position: 'right',
+                    formatter: '{b}',
+                    fontSize: 15
+                },
+                force: {
+                    repulsion: 300,
+                    edgeLength: 200
+                },
+                labelLayout: {
+                    hideOverlap: true
+                },
+                symbolSize: 40,
+                edgeSymbol: ['circle', 'arrow'],
+                edgeSymbolSize: [4, 10],
+                lineStyle: {
+                    color: 'source',
+                    curveness: 0
+                }
+                
+            }
+        ]
+    };
+    myChart.setOption(option);
+</script>
+
+{% comment %} 股东列表 {% endcomment %}
+<script>
+    var companyShareholders = JSON.parse('{{ company_shareholders_json|escapejs }}');
+    companyShareholders.sort(function(a, b) {
+        return b.r.rate - a.r.rate;
+    });
+    var tableBody = document.getElementById('shareholders-table');
+    for (var i = 0; i < companyShareholders.length; i++) {
+      var newRow = document.createElement('tr');
+      var nameCell=document.createElement('td');
+      nameCell.textContent=companyShareholders[i].m.name;
+      var rateCell=document.createElement('td');
+      rateCell.textContent=companyShareholders[i].r.rate;
+      newRow.appendChild(nameCell);
+      newRow.appendChild(rateCell);
+      tableBody.appendChild(newRow);
+    }
+</script>
+{% comment %} 股东持股比例饼图 {% endcomment %}
+<script>
+    var companyShareholders = JSON.parse('{{ company_shareholders_json|escapejs }}');
+    companyShareholders.sort(function(a, b) {
+        return b.r.rate - a.r.rate;
+    });
+    var myChart = echarts.init(document.getElementById('shareholder_graph'),'macarons');
+    var shareholder_data=[];
+    var shareholder_rate_all=0;
+    for (var i = 0; i < companyShareholders.length; i++) {
+        var shareholder_rate={};
+        shareholder_rate['value']=companyShareholders[i].r.rate;
+        shareholder_rate['name']=companyShareholders[i].m.name;
+        shareholder_rate_all+=companyShareholders[i].r.rate;
+        shareholder_data.push(shareholder_rate);
+    }
+    var shareholder_other="其他股东";
+    var shareholder_other_rate=100-shareholder_rate_all;
+    var shareholder_rate={};
+    shareholder_rate['value']=shareholder_other_rate;
+    shareholder_rate['name']=shareholder_other;
+    shareholder_data.push(shareholder_rate);
+
+    var option= {
+        tooltip: {
+          trigger: 'item'
+        },
+        legend: {
+          bottom: '5%',
+          left: 'center',
+          formatter: function(name) {
+            var limit = 5; // Change this number to the desired limit
+            var data = option.series[0].data; // Assuming pie chart is the first series
+            var dataIndex = data.findIndex(function(item) {
+              return item.name === name;
+            });
+            if (dataIndex < limit) {
+              return name;
+            } else {
+              return '';
+            }
+          }
+        },
+        series: [
+          {
+            name: 'Access From',
+            type: 'pie',
+            radius: ['40%', '70%'],
+            avoidLabelOverlap: false,
+            itemStyle: {
+              borderRadius: 10,
+              borderColor: '#fff',
+              borderWidth: 2
+            },
+            label: {
+              show: false,
+              position: 'center'
+            },
+            emphasis: {
+              label: {
+                show: true,
+                fontSize: 20,
+                fontWeight: 'bold'
+              }
+            },
+            labelLine: {
+              show: false
+            },
+            data: shareholder_data
+          }
+        ]
+    };
+    myChart.setOption(option);   
+</script>
+
+{% comment %} 高管列表 {% endcomment %}
+<script>
+    var companyExecutives = JSON.parse('{{ company_executives_json|escapejs }}');
+    var tableBody = document.getElementById('executives-table');
+
+    for (var i = 0; i < companyExecutives.length; i++) {
+        var newRow = document.createElement('tr');
+        var nameCell=document.createElement('td');
+        nameCell.textContent=companyExecutives[i].m.name;
+        var genderCell=document.createElement('td');
+        genderCell.textContent=companyExecutives[i].m.gender;
+        var ageCell=document.createElement('td');
+        ageCell.textContent=companyExecutives[i].m.age;
+        var educationCell=document.createElement('td');
+        educationCell.textContent=companyExecutives[i].m.education;
+        var positionCell=document.createElement('td');
+        positionCell.textContent=companyExecutives[i].r.position;
+        var salaryCell=document.createElement('td');
+        salaryCell.textContent=companyExecutives[i].r.salary;
+        newRow.appendChild(nameCell);
+        newRow.appendChild(genderCell);
+        newRow.appendChild(ageCell);
+        newRow.appendChild(educationCell);
+        newRow.appendChild(positionCell);
+        newRow.appendChild(salaryCell);
+        tableBody.appendChild(newRow);
+    }
+</script>

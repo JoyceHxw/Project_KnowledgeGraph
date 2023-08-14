@@ -1,0 +1,159 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="{% static 'plugins/boomerang/assets/css/theme.css' %}">
+    <style>
+        .error-msg {
+            color: red;
+            position: absolute;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <main class="main">
+        <section class="bg-cover bg-size--cover" data-spotlight="fullscreen" style="padding-top: 10px; background-image: url('{% static 'plugins/boomerang/assets/images/backgrounds/img-1.jpg' %}')">
+          <span class="mask bg-tertiary alpha-5"></span>
+            <div class="container d-flex align-items-center no-padding">
+              <div class="col">
+                <div class="row justify-content-center">
+                  <div class="col-lg-5">
+                    <div class="card bg-tertiary text-white">
+                      <div class="card-body">
+                        <span class="clearfix"></span>
+                        <div class="col-md-12">
+                            <img src="{% static 'plugins/boomerang/assets/images/brand/icon.png' %}" style="width: 50px;">
+                            <a href="{% url 'login_pwd' %}" class="text-white" style="float: right;">已有账户？点击登录</a>
+                        </div>
+                        <h4 class="heading h3 text-white pt-1 pb-1">欢迎来到上市公司知识图谱</h4>
+                          <form id="regForm" class="form-tertiary" method="POST" novalidate>
+                            {% csrf_token %}
+                            {% for field in form %}
+                                {% if field.name == 'code' %}
+                                    <div class="form-group">
+                                        {% comment %} 这是表单字段的标签元素，用于显示字段的标签文字。 {% endcomment %}
+                                        {% comment %} <label> 元素的 for 属性是与表单字段的 id 属性相对应的，它用于指示该标签与特定的表单字段相关联 {% endcomment %}
+                                        {% comment %} 这个 id 属性值是 Django 自动生成的，用于在后台与表单字段进行关联。  {% endcomment %}
+                                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                        <div class='row'>
+                                            <div class='col-sm-7'>
+                                                {% comment %} 这是表单字段本身，它会在页面中生成相应的 HTML 表单元素，例如输入框、下拉列表等。 {% endcomment %}
+                                                {{ field }}
+                                                <span class="error-msg">{{ field.errors.0 }}</span>
+                                            </div>
+                                            <div class='col-sm-5 text-right'>
+                                                <input id="btnSms" type="button" class="btn btn-default" value="点击获取验证码"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    <div class="form-group">
+                                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                        {{ field }}
+                                        <span class="error-msg">{{ field.errors.0 }}</span>
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+                            {% comment %} 要放在表单内，点击submit才有效 {% endcomment %}
+                            {% comment %} <button id="btnSubmit" type="submit" class="btn btn-block btn-lg bg-white mt-4">注  册</button> {% endcomment %}
+                            
+                            <input id="btnSubmit" type="button" class="btn btn-block btn-lg bg-white mt-4" value="注  册"/>
+                          </form>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+        </section>
+    </main>
+</body>
+<script src="{% static 'js/jquery-3.6.0.min.js' %}"></script>
+<!-- Core -->
+<script src="{% static 'plugins/boomerang/assets/vendor/jquery/jquery.min.js' %}"></script>
+<script src="{% static 'plugins/boomerang/assets/vendor/popper/popper.min.js' %}"></script>
+<script src="{% static 'plugins/boomerang/assets/js/bootstrap/bootstrap.min.js' %}"></script>
+<!-- FontAwesome 5 -->
+<script src="{% static 'plugins/boomerang/assets/vendor/fontawesome/js/fontawesome-all.min.js' %}" defer></script>
+
+<script>
+    $(function (){
+        bindClickBtnSms();
+        bindClickSubmit();
+    })
+    // 点击发送发送验证码
+    function bindClickBtnSms(){
+        $('#btnSms').click(function () {
+            //再次点击时先清空上次的错误信息
+            $('.error-msg').empty();
+
+            //获取用户手机号
+            var mobilePhone=$('#id_mobile_phone').val();
+            // 发送ajax请求，把⼿机号发送过去
+            $.ajax({
+                //生成一个URL，指向名为send_sms的视图函数。
+                url: "{% url 'send_sms' %}", // 等价于 /send/sms/
+                type: "GET",
+                data: {mobile_phone: mobilePhone, tpl: "register"},
+                dataType: "JSON", // 将服务端返回的数据反序列化为字典
+                success: function (res) {
+                    console.log(res)
+                    if (res.status){
+                        sendSmsRemind();
+                    }
+                    else{
+                        //输出错误信息在span
+                        $.each(res.error, function (key,value){
+                            $("#id_"+key).next().text(value[0]);
+                        })
+                    }
+                }
+            })
+        })
+    }
+    //倒计时
+    function sendSmsRemind(){
+        var $smsBtn=$('#btnSms');
+        $smsBtn.prop('disabled',true); //禁用
+        var time=60;
+        var remind=setInterval(function (){
+            $smsBtn.val(time+'秒重新发送');
+            time=time-1;
+            if(time<1){
+                clearInterval(remind);
+                $smsBtn.val('点击获取验证码').prop('disabled',false);
+            }
+        },1000)
+    }
+    //登录
+    function bindClickSubmit(){
+        $('#btnSubmit').click(function (){
+            $('.error-msg').empty();
+            //收集表单数据发送到后台
+            $.ajax({
+                url:"{% url 'register' %}",
+                type:"POST",
+                data: $('#regForm').serialize(), //获取所有字段数据+csrf token
+                dataType: "JSON",
+                success: function (res) {
+                    console.log("00000");
+                    console.log(res);
+                    console.log(res.data);
+                    if(res.status){
+                        location.href = res.data;
+                    }
+                    else{
+                        $.each(res.error, function (key,value){
+                            $("#id_"+key).next().text(value[0]);
+                        })
+                    }
+                }
+            })
+        })
+    }
+</script>
+</html>
